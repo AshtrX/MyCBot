@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
+using MyCBot.cmds;
 
 namespace MonBotDiscord
 {
@@ -18,7 +20,28 @@ namespace MonBotDiscord
         {
             _client = new DiscordSocketClient();
             _client.Log += Log;
-            _client.MessageReceived += MessageReceived;
+
+            var commandService = new CommandService();
+            await commandService.AddModuleAsync<PingCommand>(null);
+
+            _client.MessageReceived += async (message) =>
+            {
+                // Ne traitez pas les messages des bots
+                if (message.Author.IsBot) return;
+
+                // Préfixe de la commande
+                char prefix = '!';
+
+                // Vérifiez si le message commence par le préfixe de la commande
+                if (message.Content.StartsWith(prefix))
+                {
+                    int argPos = 1;
+                    var context = new SocketCommandContext(_client, message as SocketUserMessage);
+
+                    // Exécutez la commande
+                    await commandService.ExecuteAsync(context, argPos, null);
+                }
+            };
 
             // Remplacez YOUR_BOT_TOKEN par le token de votre bot
             await _client.LoginAsync(TokenType.Bot, "YOUR_BOT_TOKEN");
@@ -31,16 +54,6 @@ namespace MonBotDiscord
         {
             Console.WriteLine(msg.ToString());
             return Task.CompletedTask;
-        }
-
-        private async Task MessageReceived(SocketMessage message)
-        {
-            if (message.Author.IsBot) return;
-
-            if (message.Content == "!ping")
-            {
-                await message.Channel.SendMessageAsync("Pong!");
-            }
         }
     }
 }
